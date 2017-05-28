@@ -1,6 +1,7 @@
 package com.zimincom.mafiaonline;
 
 import android.content.Intent;
+import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -27,6 +28,7 @@ import com.zimincom.mafiaonline.item.ClientAccess;
 import com.zimincom.mafiaonline.item.GameConfig;
 import com.zimincom.mafiaonline.item.GameResult;
 import com.zimincom.mafiaonline.item.GameStart;
+import com.zimincom.mafiaonline.item.InvestMessage;
 import com.zimincom.mafiaonline.item.MessageItem;
 import com.zimincom.mafiaonline.item.ReadySignal;
 import com.zimincom.mafiaonline.item.ResponseItem;
@@ -47,6 +49,8 @@ import retrofit2.Callback;
 import retrofit2.Response;
 import ua.naiksoftware.stomp.Stomp;
 import ua.naiksoftware.stomp.client.StompClient;
+
+import static com.zimincom.mafiaonline.R.raw.day;
 
 
 public class GameRoomActivity extends AppCompatActivity implements View.OnClickListener {
@@ -78,6 +82,7 @@ public class GameRoomActivity extends AppCompatActivity implements View.OnClickL
     String roomId;
     String userName;
     String gameState;
+    GameConfig.GameState stage;
     User user;
     ArrayList<User> users;
     PlayerAdapter playerAdapter;
@@ -86,6 +91,7 @@ public class GameRoomActivity extends AppCompatActivity implements View.OnClickL
     int gameTime = 0;
     boolean isGameStarted = false;
     MafiaRemoteService mafiaRemoteService;
+    MediaPlayer bgm;
 
     private StompClient mStompClient;
 
@@ -114,11 +120,16 @@ public class GameRoomActivity extends AppCompatActivity implements View.OnClickL
         gson = new Gson();
         mafiaRemoteService = ServiceGenerator
                 .createService(MafiaRemoteService.class, getBaseContext());
+        bgm = MediaPlayer.create(getBaseContext(), day);
+        bgm.setLooping(true);
+        bgm.start();
 
-        gConfigs = new ArrayList<GameConfig>();
+        gConfigs = new ArrayList<>();
         gConfigs.add(new GameConfig(5, GameConfig.GameState.WAITING));
-        gConfigs.add(new GameConfig(10, GameConfig.GameState.DAY));
-        gConfigs.add(new GameConfig(5, GameConfig.GameState.NIGHT));
+        gConfigs.add(new GameConfig(60, GameConfig.GameState.DAY));
+        gConfigs.add(new GameConfig(5, GameConfig.GameState.WAITING));
+        gConfigs.add(new GameConfig(30, GameConfig.GameState.NIGHT));
+        gConfigs.add(new GameConfig(5, GameConfig.GameState.WAITING));
 
         ArrayList<User> users = new ArrayList<>();
 
@@ -157,6 +168,7 @@ public class GameRoomActivity extends AppCompatActivity implements View.OnClickL
     @Override
     protected void onPause() {
         super.onPause();
+        bgm.stop();
         mStompClient.disconnect();
     }
 
@@ -215,7 +227,7 @@ public class GameRoomActivity extends AppCompatActivity implements View.OnClickL
 
         mStompClient.topic("/from/gameStart/" + roomId + "/" + userName)
                 .subscribe(message -> runOnUiThread(() -> {
-                    String role = message.getPayload();
+                    String role = message.getPayload().trim();
                     Logger.d(role);
                     user.setRoleTo(role);
                     String roleMessage = "당신의 직업은 " + role + "입니다";
@@ -244,6 +256,11 @@ public class GameRoomActivity extends AppCompatActivity implements View.OnClickL
                     playerAdapter.removeItemByNickName(gameResult.getMsg());
                 }));
 
+        mStompClient.topic("/from/invest/" + roomId + "/" + userName)
+                .subscribe(message -> runOnUiThread(() -> {
+                    String investMessage = message.getPayload();
+                    Toast.makeText(getBaseContext(), "조사결과:" + investMessage, Toast.LENGTH_LONG).show();
+                }));
     }
 
 //    private void killPlayer(String votedNickname) {
@@ -266,39 +283,59 @@ public class GameRoomActivity extends AppCompatActivity implements View.OnClickL
     Handler gameHandler = new Handler() {
         int phaseNum = 0;
 
-
         public void handleMessage(Message message) {
-            if (message.what == GameTimerTask.PHASE_CHANGE &&
-                    phaseNum < gConfigs.size()) {
+
+            if (phaseNum == gConfigs.size()) phaseNum = 1;
+
+            if (message.what == GameTimerTask.PHASE_CHANGE && phaseNum < gConfigs.size()) {
+
                 String votedUser = playerAdapter.getVotedUserName();
                 if (!votedUser.equals("")) {
+                    Logger.d("send vote info");
                     sendVoteInfo(votedUser);
+                } else if (user.getRole() == User.Role.POLICE) {
+                    Logger.d("send investigation");
+                    requestInvestigation(votedUser);
                 }
+                stage = gConfigs.get(phaseNum).getGameState();
                 startTimer(gConfigs.get(phaseNum).getGameTime());
                 phaseNum++;
                 return;
             } else if (message.what == PlayerAdapter.READY_MESSAGE) {
                 mStompClient.send("/to/ready/" + roomId, gson.toJson(new ReadySignal(userName)))
                         .subscribe();
+            } else {
+
+                //timer num update
+                int gameTime = message.arg1;
+                int min = gameTime / 60;
+                int sec = gameTime % 60;
+                String clockText;
+                if (sec < 10) {
+                    clockText = min + ":0" + sec;
+                } else {
+                    clockText = min + ":" + sec;
+                }
+                timer.setText(clockText);
             }
 
-            //timer num update
-            int gameTime = message.arg1;
-            int min = gameTime / 60;
-            int sec = gameTime % 60;
-            String clockText;
-            if (sec < 10) {
-                clockText = min + ":0" + sec;
-            } else {
-                clockText = min + ":" + sec;
-            }
-            timer.setText(clockText);
         }
     };
 
-    private void sendVoteInfo(String votedUser) {
-        mStompClient.send("/to/vote/" + roomId, gson.toJson(new VoteMessage(userName, votedUser)))
+    private void requestInvestigation(String votedUser) {
+        mStompClient.send("/to/invest/" + roomId + "/" + userName, gson.toJson(new InvestMessage(votedUser)))
                 .subscribe();
+    }
+
+    private void sendVoteInfo(String votedUser) {
+        if (stage == GameConfig.GameState.DAY)
+            mStompClient.send("/to/vote/" + roomId, gson.toJson(new VoteMessage(userName, votedUser, "day")))
+                    .subscribe();
+
+        if (stage == GameConfig.GameState.NIGHT)
+            mStompClient.send("/to/vote/" + roomId, gson.toJson(new VoteMessage(userName, votedUser, "night")))
+                    .subscribe();
+
     }
 
     private void enterRoom(String roomId) {
@@ -331,6 +368,7 @@ public class GameRoomActivity extends AppCompatActivity implements View.OnClickL
             public void onResponse(Call<ResponseItem> call, Response<ResponseItem> response) {
                 if (response.isSuccessful()) {
                     Toast.makeText(getBaseContext(), "로비로 돌아왔습니다.", Toast.LENGTH_SHORT).show();
+
                 }
             }
 
