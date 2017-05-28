@@ -71,8 +71,8 @@ public class GameRoomActivity extends AppCompatActivity implements View.OnClickL
     SlidingUpPanelLayout slidingLayout;
     @BindView(R.id.player_list)
     RecyclerView playerListView;
-    @BindView(R.id.role_name);
-    TextView roleName;
+    @BindView(R.id.info_message)
+    TextView infoText;
 
     Intent intent;
     String roomId;
@@ -116,9 +116,9 @@ public class GameRoomActivity extends AppCompatActivity implements View.OnClickL
                 .createService(MafiaRemoteService.class, getBaseContext());
 
         gConfigs = new ArrayList<GameConfig>();
-        gConfigs.add(new GameConfig(10, GameConfig.GameState.WAITING));
-        gConfigs.add(new GameConfig(5, GameConfig.GameState.DAY));
-        gConfigs.add(new GameConfig(10, GameConfig.GameState.NIGHT));
+        gConfigs.add(new GameConfig(5, GameConfig.GameState.WAITING));
+        gConfigs.add(new GameConfig(10, GameConfig.GameState.DAY));
+        gConfigs.add(new GameConfig(5, GameConfig.GameState.NIGHT));
 
         ArrayList<User> users = new ArrayList<>();
 
@@ -146,7 +146,6 @@ public class GameRoomActivity extends AppCompatActivity implements View.OnClickL
             @Override
             public void onPanelStateChanged(View panel, SlidingUpPanelLayout.PanelState
                     previousState, SlidingUpPanelLayout.PanelState newState) {
-
             }
         });
 
@@ -159,6 +158,12 @@ public class GameRoomActivity extends AppCompatActivity implements View.OnClickL
     protected void onPause() {
         super.onPause();
         mStompClient.disconnect();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        leaveRoom();
     }
 
     private void subscribeSockets() {
@@ -198,7 +203,6 @@ public class GameRoomActivity extends AppCompatActivity implements View.OnClickL
                     String accessState = clientAccess.getAccess();
                     String newUserName = clientAccess.getUserName();
                     if (accessState.equals("enter")) {
-
                         if (newUserName.equals(userName))
                             playerAdapter.addItems(users);
                         else
@@ -214,8 +218,8 @@ public class GameRoomActivity extends AppCompatActivity implements View.OnClickL
                     String role = message.getPayload();
                     Logger.d(role);
                     user.setRoleTo(role);
-                    Toast.makeText(getBaseContext(),"당신의 직업은 " + role + "입니다", Toast.LENGTH_LONG).show();
-                    roleName.setText("나의 직업: " + role);
+                    String roleMessage = "당신의 직업은 " + role + "입니다";
+                    infoText.setText(roleMessage);
                     //게임 타이머 시작
                     gameHandler.sendEmptyMessage(GameTimerTask.PHASE_CHANGE);
                     //게임상태를 낮으로. String 이 아니라 다른것이 필요 .
@@ -231,8 +235,13 @@ public class GameRoomActivity extends AppCompatActivity implements View.OnClickL
         mStompClient.topic("/from/vote/" + roomId)
                 .subscribe(message -> runOnUiThread(() -> {
                     GameResult gameResult = gson.fromJson(message.getPayload(), GameResult.class);
-                 //   killPlayer(gameResult.getMsg());
+                 //  killPlayer(gameResult.getMsg());
                     Logger.d("killedPlayer: %s", gameResult.getMsg());
+                    if (gameResult.isFinished()) {
+                        Toast.makeText(getBaseContext(), "게임이 끝났습니다", Toast.LENGTH_SHORT).show();
+                        return;//how to end game and prepare next game?
+                    }
+                    playerAdapter.removeItemByNickName(gameResult.getMsg());
                 }));
 
     }
@@ -244,11 +253,6 @@ public class GameRoomActivity extends AppCompatActivity implements View.OnClickL
     private void send(String message) {
         mStompClient.send("/to/chat/" + roomId,
                 gson.toJson(new MessageItem(userName, message))).subscribe();
-    }
-
-    private void vote(String theVoted) {
-        mStompClient.send("/to/vote/" + roomId,
-                gson.toJson(new VoteMessage(userName, theVoted))).subscribe();
     }
 
     private void startTimer(int time) {
@@ -266,6 +270,10 @@ public class GameRoomActivity extends AppCompatActivity implements View.OnClickL
         public void handleMessage(Message message) {
             if (message.what == GameTimerTask.PHASE_CHANGE &&
                     phaseNum < gConfigs.size()) {
+                String votedUser = playerAdapter.getVotedUserName();
+                if (!votedUser.equals("")) {
+                    sendVoteInfo(votedUser);
+                }
                 startTimer(gConfigs.get(phaseNum).getGameTime());
                 phaseNum++;
                 return;
@@ -287,6 +295,11 @@ public class GameRoomActivity extends AppCompatActivity implements View.OnClickL
             timer.setText(clockText);
         }
     };
+
+    private void sendVoteInfo(String votedUser) {
+        mStompClient.send("/to/vote/" + roomId, gson.toJson(new VoteMessage(userName, votedUser)))
+                .subscribe();
+    }
 
     private void enterRoom(String roomId) {
         Call<ResponseItem> call = mafiaRemoteService.enterRoom(roomId);
