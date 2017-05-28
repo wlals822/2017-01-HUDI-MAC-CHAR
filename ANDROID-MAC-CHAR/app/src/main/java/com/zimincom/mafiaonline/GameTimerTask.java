@@ -7,9 +7,6 @@ import com.orhanobut.logger.Logger;
 
 import java.util.TimerTask;
 
-/**
- * Created by Zimincom on 2017. 5. 23..
- */
 
 public class GameTimerTask extends TimerTask{
 

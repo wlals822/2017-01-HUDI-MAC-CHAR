@@ -54,12 +54,7 @@
             android:onClick="setTimer"
             android:text="00:00"
             android:textColor="#ffffff" />
-        <TextView
-            android:id="@+id/role_name"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_toEndOf="@+id/timer_view"
-            android:layout_alignBaseline="@+id/timer_view"/>
+
 
     </RelativeLayout>
 
@@ -104,6 +99,13 @@
 
         </android.support.v7.widget.RecyclerView>
 
+        <TextView
+            android:id="@+id/info_message"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/player_list"
+            android:layout_centerHorizontal="true"
+            android:text="게임을 시작하려면 레디하세요"/>
 
     </RelativeLayout>
 

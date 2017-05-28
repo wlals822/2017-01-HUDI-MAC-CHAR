@@ -58,8 +58,16 @@ public class User implements Serializable {
                 '}';
     }
 
+    public boolean getVoted() {
+        return isVoted;
+    }
+
     public enum Role {
         MAFIA, CITIZEN, DOCTER, POLICE
+    }
+
+    public void setVoted(boolean voted) {
+        this.isVoted = voted;
     }
 
     public enum Status {
