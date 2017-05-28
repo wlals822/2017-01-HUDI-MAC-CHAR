@@ -64,7 +64,7 @@ public class PlayerAdapter extends RecyclerView.Adapter<PlayerAdapter.ViewHolder
         }
 
         // if day -> 타이머가 종료될때 서버에 메시지를 보낸다 .
-         if (gameState != null && gameState == "day") {
+         if (gameState != null && gameState.equals("day")) {
             holder.readyState.setVisibility(View.GONE);
             holder.container.setOnClickListener(view -> {
                 if (lastVotedUser == null) {

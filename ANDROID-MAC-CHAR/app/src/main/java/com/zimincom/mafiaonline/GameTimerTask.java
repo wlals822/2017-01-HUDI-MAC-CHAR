@@ -3,8 +3,6 @@ package com.zimincom.mafiaonline;
 import android.os.Handler;
 import android.os.Message;
 
-import com.orhanobut.logger.Logger;
-
 import java.util.TimerTask;
 
 
@@ -25,11 +23,10 @@ public class GameTimerTask extends TimerTask{
             Message message = handler.obtainMessage();
             message.arg1 = gameTime;
             handler.sendMessage(message);
-            if (gameTime == 0) {
+            if (gameTime < 0) {
                 this.cancel();
                 //send handler to change game phase
                 handler.sendEmptyMessage(PHASE_CHANGE);
-                Logger.d("task canceld");
             }
             gameTime--;
         } catch (Exception e) {

@@ -21,4 +21,8 @@ public class GameConfig {
     public int getGameTime() {
         return gameTime;
     }
+
+    public GameState getGameState() {
+        return gameState;
+    }
 }
