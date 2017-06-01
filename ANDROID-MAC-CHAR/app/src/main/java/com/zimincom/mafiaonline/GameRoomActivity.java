@@ -8,6 +8,7 @@ import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.GridLayoutManager;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -16,13 +17,13 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.gson.Gson;
 import com.orhanobut.logger.Logger;
 import com.sothree.slidinguppanel.SlidingUpPanelLayout;
+import com.zimincom.mafiaonline.adapter.MessageAdapter;
 import com.zimincom.mafiaonline.adapter.PlayerAdapter;
 import com.zimincom.mafiaonline.item.ClientAccess;
 import com.zimincom.mafiaonline.item.GameConfig;
@@ -70,7 +71,7 @@ public class GameRoomActivity extends AppCompatActivity implements View.OnClickL
     @BindView(R.id.timer_view)
     TextView timer;
     @BindView(R.id.messages_container)
-    LinearLayout messageContainer;
+    RecyclerView messageContainer;
     @BindView(R.id.sliding_layout)
     SlidingUpPanelLayout slidingLayout;
     @BindView(R.id.player_list)
@@ -85,7 +86,9 @@ public class GameRoomActivity extends AppCompatActivity implements View.OnClickL
     GameConfig.GameState stage;
     User user;
     ArrayList<User> users;
+    ArrayList<MessageItem> messages;
     PlayerAdapter playerAdapter;
+    MessageAdapter messageAdapter;
     ArrayList<GameConfig> gConfigs;
 
     int gameTime = 0;
@@ -125,13 +128,14 @@ public class GameRoomActivity extends AppCompatActivity implements View.OnClickL
         bgm.start();
 
         gConfigs = new ArrayList<>();
-        gConfigs.add(new GameConfig(5, GameConfig.GameState.WAITING));
-        gConfigs.add(new GameConfig(60, GameConfig.GameState.DAY));
-        gConfigs.add(new GameConfig(5, GameConfig.GameState.WAITING));
-        gConfigs.add(new GameConfig(30, GameConfig.GameState.NIGHT));
-        gConfigs.add(new GameConfig(5, GameConfig.GameState.WAITING));
+        gConfigs.add(new GameConfig(5, GameConfig.GameState.WAITING, "시작 대기중입니다."));
+        gConfigs.add(new GameConfig(60, GameConfig.GameState.DAY, "의심되는 플레이어를 선택하세요"));
+        gConfigs.add(new GameConfig(5, GameConfig.GameState.WAITING, "결과 처리중입니다."));
+        gConfigs.add(new GameConfig(30, GameConfig.GameState.NIGHT, "역할에 따라 선택하세요."));
+        gConfigs.add(new GameConfig(5, GameConfig.GameState.WAITING, "결과 처리중입니다."));
 
         ArrayList<User> users = new ArrayList<>();
+        messages = new ArrayList<>();
 
         intent = getIntent();
         user = (User) intent.getSerializableExtra("user");
@@ -146,6 +150,13 @@ public class GameRoomActivity extends AppCompatActivity implements View.OnClickL
         playerListView.setLayoutManager(gridLayoutManager);
         playerListView.setItemAnimator(new DefaultItemAnimator());
         playerListView.setAdapter(playerAdapter);
+
+
+        messageAdapter = new MessageAdapter(getBaseContext(), messages, R.layout.my_chat, userName);
+        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getBaseContext(), LinearLayoutManager.VERTICAL, false);
+        messageContainer.setLayoutManager(linearLayoutManager);
+        messageContainer.setItemAnimator(new DefaultItemAnimator());
+        messageContainer.setAdapter(messageAdapter);
 
 
         slidingLayout.addPanelSlideListener(new SlidingUpPanelLayout.PanelSlideListener() {
@@ -182,15 +193,10 @@ public class GameRoomActivity extends AppCompatActivity implements View.OnClickL
         mStompClient.topic("/from/chat/" + roomId)
                 .subscribe(message -> runOnUiThread(() -> {
                     ChatLayout chatLayout = new ChatLayout(getBaseContext());
+                    //change to recycler
                     MessageItem messageItem =
                             gson.fromJson(message.getPayload(), MessageItem.class);
-                    chatLayout.setName(messageItem.userName);
-                    if (messageItem.userName.equals(userName)) {
-                        chatLayout.setToMyMessage();
-                    }
-                    chatLayout.setMessage(messageItem.content);
-                    messageContainer.addView(chatLayout);
-
+                    messageAdapter.addMessage(messageItem);
                 }));
 
         mStompClient.topic("/from/ready/" + roomId)
@@ -299,13 +305,13 @@ public class GameRoomActivity extends AppCompatActivity implements View.OnClickL
                 }
                 stage = gConfigs.get(phaseNum).getGameState();
                 startTimer(gConfigs.get(phaseNum).getGameTime());
+                infoText.setText(gConfigs.get(phaseNum).getGameMessage());
                 phaseNum++;
                 return;
             } else if (message.what == PlayerAdapter.READY_MESSAGE) {
                 mStompClient.send("/to/ready/" + roomId, gson.toJson(new ReadySignal(userName)))
                         .subscribe();
             } else {
-
                 //timer num update
                 int gameTime = message.arg1;
                 int min = gameTime / 60;

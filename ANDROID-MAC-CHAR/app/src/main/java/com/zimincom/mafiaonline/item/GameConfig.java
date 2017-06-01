@@ -8,10 +8,16 @@ public class GameConfig {
 
     int gameTime;
     GameState gameState;
-
-    public GameConfig(int gameTime, GameState gameState) {
+    String gameMessage;
+    
+    public GameConfig(int gameTime, GameState gameState, String gameMessage) {
         this.gameTime = gameTime;
         this.gameState = gameState;
+        this.gameMessage = gameMessage;
+    }
+
+    public String getGameMessage() {
+        return gameMessage;
     }
 
     public enum GameState {

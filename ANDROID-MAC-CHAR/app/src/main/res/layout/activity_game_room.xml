@@ -29,22 +29,30 @@
 
         </android.support.v7.widget.Toolbar>
 
-        <ScrollView
-            android:id="@+id/message_scroll"
+        <!--<ScrollView-->
+            <!--android:id="@+id/message_scroll"-->
+            <!--android:layout_width="match_parent"-->
+            <!--android:layout_height="match_parent"-->
+            <!--android:layout_below="@id/toolBar">-->
+
+            <!--<LinearLayout-->
+                <!--android:id="@+id/messages_container"-->
+                <!--android:layout_width="match_parent"-->
+                <!--android:layout_height="wrap_content"-->
+                <!--android:layout_gravity="bottom"-->
+                <!--android:layout_margin="30dp"-->
+                <!--android:orientation="vertical">-->
+
+            <!--</LinearLayout>-->
+        <!--</ScrollView>-->
+
+        <android.support.v7.widget.RecyclerView
+            android:id="@+id/messages_container"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_below="@id/toolBar">
+            android:layout_below="@+id/toolBar">
 
-            <LinearLayout
-                android:id="@+id/messages_container"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom"
-                android:layout_margin="30dp"
-                android:orientation="vertical">
-
-            </LinearLayout>
-        </ScrollView>
+        </android.support.v7.widget.RecyclerView>
 
         <TextView
             android:id="@+id/timer_view"
