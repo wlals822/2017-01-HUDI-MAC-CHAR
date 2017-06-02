@@ -259,7 +259,7 @@ public class GameRoomActivity extends AppCompatActivity implements View.OnClickL
                         Toast.makeText(getBaseContext(), "게임이 끝났습니다", Toast.LENGTH_SHORT).show();
                         return;//how to end game and prepare next game?
                     }
-                    playerAdapter.removeItemByNickName(gameResult.getMsg());
+                    playerAdapter.killByNickName(gameResult.getMsg());
                 }));
 
         mStompClient.topic("/from/invest/" + roomId + "/" + userName)

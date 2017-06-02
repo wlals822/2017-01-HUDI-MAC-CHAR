@@ -41,7 +41,6 @@
         android:textColor="@color/colorMainText"
         android:backgroundTint="@color/colorMainText"
         android:textColorHighlight="@color/colorMainText"
-
         android:hint="이메일을 입력하세요"/>
 
     <android.support.design.widget.TextInputEditText
