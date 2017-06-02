@@ -1,4 +1,4 @@
-package com.zimincom.mafiaonline;
+package com.zimincom.mafiaonline.activity;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -20,6 +20,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.orhanobut.logger.Logger;
+import com.zimincom.mafiaonline.R;
+import com.zimincom.mafiaonline.tasks.RoomUpdateTask;
 import com.zimincom.mafiaonline.adapter.RoomAdapter;
 import com.zimincom.mafiaonline.item.ResponseItem;
 import com.zimincom.mafiaonline.item.Room;
