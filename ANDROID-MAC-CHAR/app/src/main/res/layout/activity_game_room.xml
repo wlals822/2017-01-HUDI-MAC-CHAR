@@ -15,9 +15,11 @@
     sothree:umanoShadowHeight="4dp">
 
     <RelativeLayout
+        android:id="@+id/room_content"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@drawable/background_night"
+        android:background="@drawable/background_noon"
+
         tools:context="com.zimincom.mafiaonline.activity.GameRoomActivity">
 
 

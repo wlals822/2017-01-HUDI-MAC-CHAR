@@ -2,6 +2,7 @@ package com.zimincom.mafiaonline.adapter;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.media.MediaPlayer;
 import android.os.Handler;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -55,6 +56,10 @@ public class PlayerAdapter extends RecyclerView.Adapter<PlayerAdapter.ViewHolder
         int readyColor = context.getResources().getColor(R.color.colorPrimary);
         User selectedUser = users.get(position);
         holder.nickname.setText(users.get(position).getNickName());
+
+        if (users.get(position).getRole() != null)
+            holder.role.setText(users.get(position).getRole().toString());
+
         if (selectedUser.isReady())
             holder.readyState.setTextColor(readyColor);
 
@@ -173,6 +178,21 @@ public class PlayerAdapter extends RecyclerView.Adapter<PlayerAdapter.ViewHolder
         for (User user : users) {
             if (user.getNickName().equals(nickName)) {
                 users.get(targetPosition).setKilled(true);
+                MediaPlayer gunSound = MediaPlayer.create(context, R.raw.guneffect);
+                gunSound.start();
+
+                notifyItemChanged(targetPosition);
+                break;
+            }
+            targetPosition++;
+        }
+    }
+
+    public void showMyRoleTo(String role) {
+        int targetPosition = 0;
+        for (User user : users) {
+            if (user.getNickName().equals(userName)) {
+                users.get(targetPosition).setRoleTo(role);
                 notifyItemChanged(targetPosition);
                 break;
             }
